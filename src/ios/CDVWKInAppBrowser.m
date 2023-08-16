@@ -92,16 +92,17 @@ static CDVWKInAppBrowser* instance = nil;
 - (void)open:(CDVInvokedUrlCommand*)command
 {
     CDVPluginResult* pluginResult;
+    BOOL keepCallback = YES; // Utilisez BOOL pour les valeurs booléennes en Objective-C
     
     NSString* url = [command argumentAtIndex:0];
     NSString* target = [command argumentAtIndex:1 withDefault:kInAppBrowserTargetSelf];
     NSString* options = [command argumentAtIndex:2 withDefault:@"" andClass:[NSString class]];
     
-    self.callbackId = command.callbackId;
-    
     if (url != nil) {
         NSURL* baseUrl = [self.webViewEngine URL];
         NSURL* absoluteUrl = [[NSURL URLWithString:url relativeToURL:baseUrl] absoluteURL];
+        
+        NSLog(@"SET KEEP_CALLBACK 1");
         
         if ([self isSystemUrl:absoluteUrl]) {
             target = kInAppBrowserTargetSystem;
@@ -111,6 +112,7 @@ static CDVWKInAppBrowser* instance = nil;
             [self openInCordovaWebView:absoluteUrl withOptions:options];
         } else if ([target isEqualToString:kInAppBrowserTargetSystem]) {
             [self openInSystem:absoluteUrl];
+            keepCallback = NO;
         } else { // _blank or anything else
             [self openInInAppBrowser:absoluteUrl withOptions:options];
         }
@@ -120,9 +122,16 @@ static CDVWKInAppBrowser* instance = nil;
         pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"incorrect number of arguments"];
     }
     
-    [pluginResult setKeepCallback:[NSNumber numberWithBool:YES]];
+    NSLog(@"SET KEEP_CALLBACK 0");
+    
+    if (keepCallback) {
+        self.callbackId = command.callbackId;
+    }
+    
+    [pluginResult setKeepCallback:[NSNumber numberWithBool:keepCallback]];
     [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
 }
+
 
 - (void)openInInAppBrowser:(NSURL*)url withOptions:(NSString*)options
 {
